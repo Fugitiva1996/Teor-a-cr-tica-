@@ -151,7 +151,7 @@ footer{text-align:center;color:var(--mu);font-size:12px;padding:16px 0 28px}
 <div class="q"><p>B. Elige una obra digital que conozcas y analízala desde el aura (Benjamin) y desde el espectáculo (Debord).</p><textarea id="a2" placeholder="Tu respuesta…"></textarea></div>
 <h3>Tu PDF</h3>
 <input type="text" id="nom" placeholder="Nombre completo" autocomplete="name"><input type="text" id="grp" placeholder="Grupo">
-<button id="pdf">Generar PDF</button><div id="msg"></div></div></article>
+<button id="pdf">Generar PDF</button><button id="prt" style="display:none">Imprimir / guardar como PDF</button><div id="msg"></div></div></article>
 
 <article class="post"><div class="bd"><h2>Para llevarte memorizado</h2>
 <ol><li><b>Benjamin = aura:</b> la autenticidad y presencia irrepetible de la obra.</li><li><b>Benjamin = reproducción técnica:</b> fotografía y cine transforman producción, circulación y percepción del arte.</li><li><b>Debord = espectáculo:</b> las relaciones sociales están mediadas por imágenes.</li><li><b>Debord = separación:</b> la experiencia se sustituye u organiza mediante representaciones que consumimos.</li><li><b>Ambos = cultura visual:</b> estudian cómo las imágenes transforman nuestra relación con el mundo, desde perspectivas distintas.</li></ol>
@@ -177,7 +177,7 @@ $("quiz").addEventListener("change",function(e){if(done)return;var n=0;Q.forEach
 $("cal").onclick=function(){if(ans.filter(function(a){return a>=0}).length<5){$("res").textContent="Responde las 5 preguntas primero.";return}
 done=true;score=0;Q.forEach(function(q,i){var ls=document.querySelectorAll("input[name=q"+i+"]");ls.forEach(function(r){r.disabled=true;var l=r.parentNode;if(+r.value===q[2])l.classList.add("ok");else if(r.checked)l.classList.add("no")});var ok=ans[i]===q[2];if(ok)score++;$("f"+i).textContent=(ok?"¡Correcto! ":"Revisa: ")+q[3]});
 $("res").textContent="Resultado: "+score+" de 5"};
-$("pdf").onclick=function(){var nm=$("nom").value.trim();if(!nm){$("msg").textContent="Escribe tu nombre para el PDF.";return}
+$("pdf").onclick=function(){try{mk()}catch(e){$("msg").textContent="Error al generar: "+(e&&e.message||e)}};function mk(){var nm=$("nom").value.trim();$("msg").textContent="Generando PDF…";if(!nm){$("msg").textContent="Escribe tu nombre para el PDF.";return}
 if(!window.jspdf){$("msg").textContent="No se pudo cargar el generador de PDF.";return}
 var d=new window.jspdf.jsPDF({unit:"mm",format:"a4"}),y=20,W=170;
 function t(s,sz,b){d.setFont("helvetica",b?"bold":"normal");d.setFontSize(sz);d.splitTextToSize(s,W).forEach(function(l){if(y>textLimit){d.addPage();y=20}d.text(l,20,y);y+=sz*0.5})}
@@ -188,7 +188,25 @@ Q.forEach(function(q,i){t((i+1)+". "+q[0],11,1);t("Respuesta: "+(ans[i]>=0?q[1][
 y+=3;t("Preguntas abiertas",13,1);y+=2;
 t("A. ¿Cómo podemos aplicar Benjamin y Debord a Instagram?",11,1);t($("a1").value.trim()||"(sin responder)",11);y+=4;
 t("B. Una obra digital analizada desde el aura y el espectáculo",11,1);t($("a2").value.trim()||"(sin responder)",11);
-var blob=d.output("blob");
-claude.use("downloads").then(function(dl){if(!dl){$("msg").textContent="La descarga no está disponible aquí. Abre la página en claude.ai.";return}
-return dl.save({filename:"cuestionario-benjamin-debord-"+nm.replace(/[^\wáéíóúñÁÉÍÓÚÑ ]/g,"").replace(/ +/g,"-")+".pdf",data:blob}).then(function(){$("msg").textContent="PDF listo."},function(e){$("msg").textContent=e&&e.code==="declined"?"Descarga cancelada.":"No se pudo guardar el PDF."})}).catch(function(){$("msg").textContent="No se pudo generar el PDF."})};
+var blob = d.output("blob");
+var safeName = nm.replace(/[^\wáéíóúñÁÉÍÓÚÑ ]/g,"").replace(/ +/g,"-");
+function viaLink(){
+var url = URL.createObjectURL(blob);
+var link = document.createElement("a");
+link.href = url;
+link.download = "cuestionario-benjamin-debord-" + safeName + ".pdf";
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
+setTimeout(function(){
+  URL.revokeObjectURL(url);
+}, 1500);
+$("msg").textContent = "Tu PDF se está descargando.";
+$("prt").style.display="inline-block";
+}
+var cu=window.claude&&window.claude.use?window.claude.use("downloads"):Promise.resolve(null);
+cu.then(function(dl){if(!dl){viaLink();return}
+return dl.save({filename:"cuestionario-benjamin-debord-"+safeName+".pdf",data:blob}).then(function(){$("msg").textContent="PDF listo."},function(e){if(e&&e.code==="declined"){$("msg").textContent="Descarga cancelada.";return}viaLink()})}).catch(function(){viaLink()})
+}
+$("prt").onclick=function(){window.print()};
 </script></body></html>
